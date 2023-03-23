@@ -41,10 +41,11 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
-#define DWG_MAX_DEBUG_VERTICES 4096
-#define DWG_MAX_DEBUG_SPHERES 1024
+#define DWG_MAX_DEBUG_VERTICES 16384
+#define DWG_MAX_DEBUG_SPHERES 8192
 
 #define DWG_MAX(_x, _y) _x > _y ? _x : _y;
+#define DWG_MIN(_x, _y) _x < _y ? _x : _y;
 
 struct DebugVertex
 {
@@ -54,9 +55,8 @@ struct DebugVertex
 
 struct DebugSphere
 {
-	Vector3 pos;
+	Matrix4 worldLocation;
 	Vector3 color;
-	Vector3 scale;
 };
 
 struct DwGSimpleGraphics
@@ -361,7 +361,7 @@ void dwgRender(const Matrix4& camera, const float fov)
 			for (int32_t i = 0; i < g_dwg.numSpheres; ++i)
 			{
 				const DebugSphere& sphere = g_dwg.spheres[i];
-				mvpSphere = mvp * Matrix4::translation(sphere.pos)* Matrix4::scale(sphere.scale);
+				mvpSphere = mvp * sphere.worldLocation;
 
 				glUniform3fv(g_dwg.vertexShaderTintLoc, 1, toFloatPtr(sphere.color));
 				glUniformMatrix4fv(g_dwg.vertexShaderMVPLoc, 1, GL_FALSE, (const GLfloat*)&mvpSphere);
@@ -380,7 +380,7 @@ void dwgRender(const Matrix4& camera, const float fov)
 		g_dwg.numSpheres = 0;
 
 		const double nextTime = glfwGetTime();
-		g_dwg.deltaTime = DWG_MAX((float)(nextTime - g_dwg.globalTime), 0.1f);	// clamp max time to 0.1, so we have something predictable once placing breakpoint in code
+		g_dwg.deltaTime = DWG_MIN((float)(nextTime - g_dwg.globalTime), 0.1f);	// clamp max time to 0.1, so we have something predictable once placing breakpoint in code
 		g_dwg.globalTime = nextTime;
 	}
 }
@@ -438,9 +438,19 @@ void dwgDebugSphere(const Vector3& position, const Vector3& scale, const Vector3
 	assert(g_dwg.numSpheres + 1 < DWG_MAX_DEBUG_SPHERES && g_dwg.spheres != nullptr);
 
 	DebugSphere& sphere = g_dwg.spheres[g_dwg.numSpheres];
-	sphere.pos = position;
+	sphere.worldLocation = Matrix4::translation(position) * Matrix4::scale(scale);
 	sphere.color = color;
-	sphere.scale = scale;
+
+	g_dwg.numSpheres += 1;
+}
+
+void dwgDebugSphere(const Matrix4& worldLocation, const Vector3& color)
+{
+	assert(g_dwg.numSpheres + 1 < DWG_MAX_DEBUG_SPHERES && g_dwg.spheres != nullptr);
+
+	DebugSphere& sphere = g_dwg.spheres[g_dwg.numSpheres];
+	sphere.worldLocation = worldLocation;
+	sphere.color = color;
 
 	g_dwg.numSpheres += 1;
 }

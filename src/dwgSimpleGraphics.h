@@ -28,3 +28,6 @@ void dwgDebugLine(const Vector3& start, const Vector3& end, const Vector3& color
 
 // add debug sphere to this frame
 void dwgDebugSphere(const Vector3& position, const Vector3& scale, const Vector3& color);
+
+// add debug sphere to this frame
+void dwgDebugSphere(const Matrix4& worldLocation, const Vector3& color);
